@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Alpha AI Multi-TF Terminal</title>
+    <title>Alpha Trading Terminal</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
             --bg-color: #0b0e11;
             --card-bg: #1e2329;
-            --accent: #fcd535;
+            --accent: #fcd535; /* Binance Yellow uslubida */
             --text-main: #eaecef;
             --text-dim: #848e9c;
             --success: #0ecb81;
@@ -19,55 +19,72 @@
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             margin: 0;
-            padding: 12px;
+            padding: 15px;
             user-select: none;
         }
 
         /* Header */
         .header {
-            padding: 10px 5px 20px;
+            padding: 10px 5px 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .header h1 { font-size: 18px; margin: 0; color: var(--accent); letter-spacing: 1px; }
+        .header h1 {
+            font-size: 22px;
+            margin: 0;
+            background: linear-gradient(90deg, #fff, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-        /* Market Grid */
+        /* Grid System */
         .market-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 12px;
+            transition: all 0.3s ease;
         }
 
         .market-card {
             background: var(--card-bg);
-            border-radius: 12px;
-            padding: 15px;
+            border-radius: 16px;
+            padding: 16px;
             border: 1px solid #363c4e;
-            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            position: relative;
+            overflow: hidden;
         }
 
-        .market-card:active { transform: scale(0.96); }
-        .symbol-pair { font-weight: bold; font-size: 15px; display: block; }
-        .btn-analyze {
-            margin-top: 10px;
-            background: var(--accent);
-            color: black;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 6px;
-            font-size: 11px;
+        .market-card:active {
+            transform: scale(0.96);
+            border-color: var(--accent);
+        }
+
+        .symbol-pair {
             font-weight: bold;
-            width: 100%;
+            font-size: 16px;
+            display: block;
+            margin-bottom: 4px;
         }
 
-        /* Overlay */
+        .market-type {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+
+        /* Signal Overlay (Modal kabi) */
         #signal-overlay {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: var(--bg-color);
             z-index: 100;
             display: none;
@@ -78,37 +95,52 @@
         }
 
         .back-btn {
-            background: #2b3139; border: none; color: white;
-            padding: 8px 15px; border-radius: 8px; margin-bottom: 15px;
+            background: #2b3139;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 14px;
             width: fit-content;
         }
 
-        /* Multi-TF Stats */
-        .stats-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 15px;
+        .signal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
         }
 
-        .tf-box {
-            background: var(--card-bg);
-            padding: 12px 5px;
-            border-radius: 10px;
-            text-align: center;
-            border: 1px solid #363c4e;
+        .live-tag {
+            background: rgba(14, 203, 129, 0.1);
+            color: var(--success);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
         }
 
-        .tf-name { font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 5px; }
-        .tf-percent { font-size: 18px; font-weight: bold; }
-        .tf-signal { font-size: 9px; font-weight: bold; text-transform: uppercase; margin-top: 3px; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
 
-        .widget-container {
-            flex-grow: 1;
-            min-height: 400px;
-            border-radius: 12px;
+        .widget-box {
+            background: #16181e;
+            border-radius: 20px;
             overflow: hidden;
             border: 1px solid #2b3139;
+        }
+
+        .disclaimer {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-align: center;
+            margin-top: 20px;
+            line-height: 1.5;
         }
     </style>
 </head>
@@ -116,103 +148,79 @@
 
     <div id="main-screen">
         <div class="header">
-            <h1>Alpha AI Signals</h1>
-            <div id="time" style="color: var(--text-dim); font-size: 11px;"></div>
+            <h1>Markets</h1>
+            <div id="time" style="color: var(--text-dim); font-size: 12px;"></div>
         </div>
-        <div class="market-grid" id="market-list"></div>
+
+        <div class="market-grid" id="market-list">
+            </div>
+
+        <div class="disclaimer">
+            Barcha signallar texnik ko'rsatkichlarga asoslangan.<br>Riskni boshqarishni unutmang.
+        </div>
     </div>
 
     <div id="signal-overlay">
         <button class="back-btn" onclick="closeSignal()">← Orqaga</button>
-        
-        <h2 id="active-symbol-title" style="margin: 0 0 15px 5px; font-size: 20px;"></h2>
-
-        <div class="stats-container">
-            <div class="tf-box">
-                <span class="tf-name">1 MINUT</span>
-                <div id="tf-1m-val" class="tf-percent">--%</div>
-                <div id="tf-1m-sig" class="tf-signal">Wait</div>
-            </div>
-            <div class="tf-box">
-                <span class="tf-name">1 SOAT</span>
-                <div id="tf-1h-val" class="tf-percent">--%</div>
-                <div id="tf-1h-sig" class="tf-signal">Wait</div>
-            </div>
-            <div class="tf-box">
-                <span class="tf-name">1 KUN</span>
-                <div id="tf-1d-val" class="tf-percent">--%</div>
-                <div id="tf-1d-sig" class="tf-signal">Wait</div>
-            </div>
+        <div class="signal-header">
+            <h2 id="active-symbol" style="margin:0">SYMBOL</h2>
+            <div class="live-tag">● LIVE SIGNAL</div>
         </div>
-
-        <div class="widget-container" id="tv-widget"></div>
-        
-        <p style="font-size: 10px; color: var(--text-dim); text-align: center; margin-top: 15px;">
-            AI tahlili RSI, MACD va Moving Averages indikatorlariga asoslangan.
-        </p>
+        <div class="widget-box" id="widget-container">
+            </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
+        tg.headerColor = '#0b0e11';
 
         const markets = [
-            { id: "BINANCE:BTCUSDT", name: "BTC / USDT" },
-            { id: "OANDA:XAUUSD", name: "XAU / USD" },
-            { id: "FX:EURUSD", name: "EUR / USD" },
-            { id: "FX:GBPUSD", name: "GBP / USD" },
-            { id: "FX:USDJPY", name: "USD / JPY" },
-            { id: "FX:AUDUSD", name: "AUD / USD" }
+            { id: "FX:EURUSD", name: "EUR / USD", type: "Forex" },
+            { id: "OANDA:XAUUSD", name: "XAU / USD", type: "Gold" },
+            { id: "BINANCE:BTCUSDT", name: "BTC / USDT", type: "Crypto" },
+            { id: "FX:AUDUSD", name: "AUD / USD", type: "Forex" },
+            { id: "FX:USDCHF", name: "USD / CHF", type: "Forex" },
+            { id: "FX:USDJPY", name: "USD / JPY", type: "Forex" }
         ];
 
-        function init() {
+        function initMarkets() {
             const list = document.getElementById('market-list');
             markets.forEach(m => {
                 const card = document.createElement('div');
                 card.className = 'market-card';
+                card.onclick = () => showSignal(m.id, m.name);
                 card.innerHTML = `
+                    <span class="market-type">${m.type}</span>
                     <span class="symbol-pair">${m.name}</span>
-                    <button class="btn-analyze" onclick="showSignal('${m.id}', '${m.name}')">TAHLIL QILISH</button>
+                    <div style="font-size: 10px; color: var(--success)">Tap to Analyze →</div>
                 `;
                 list.appendChild(card);
             });
         }
 
-        function calculateSignals() {
-            const timeframes = ['1m', '1h', '1d'];
-            timeframes.forEach(tf => {
-                const power = Math.floor(Math.random() * (99 - 60 + 1)) + 60;
-                const side = Math.random() > 0.5 ? 'BUY' : 'SELL';
-                const color = side === 'BUY' ? 'var(--success)' : 'var(--danger)';
-                
-                document.getElementById(`tf-${tf}-val`).innerText = power + '%';
-                document.getElementById(`tf-${tf}-val`).style.color = color;
-                document.getElementById(`tf-${tf}-sig`).innerText = 'STRONG ' + side;
-                document.getElementById(`tf-${tf}-sig`).style.color = color;
-            });
-        }
-
         function showSignal(symbol, name) {
             document.getElementById('main-screen').style.display = 'none';
-            document.getElementById('signal-overlay').style.display = 'flex';
-            document.getElementById('active-symbol-title').innerText = name;
+            const overlay = document.getElementById('signal-overlay');
+            overlay.style.display = 'flex';
+            document.getElementById('active-symbol').innerText = name;
 
-            calculateSignals();
+            const container = document.getElementById('widget-container');
+            container.innerHTML = ''; // Tozalash
 
-            const container = document.getElementById('tv-widget');
-            container.innerHTML = '';
             const script = document.createElement('script');
+            script.type = 'text/javascript';
             script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
             script.async = true;
             script.innerHTML = JSON.stringify({
                 "interval": "1m",
                 "width": "100%",
-                "height": "100%",
+                "isTransparent": true,
+                "height": 450,
                 "symbol": symbol,
                 "showIntervalTabs": true,
                 "locale": "en",
-                "colorTheme": "dark",
-                "isTransparent": true
+                "colorTheme": "dark"
             });
             container.appendChild(script);
         }
@@ -220,13 +228,19 @@
         function closeSignal() {
             document.getElementById('signal-overlay').style.display = 'none';
             document.getElementById('main-screen').style.display = 'block';
+            document.getElementById('widget-container').innerHTML = '';
         }
 
-        setInterval(() => {
-            document.getElementById('time').innerText = new Date().toLocaleTimeString();
-        }, 1000);
+        // Soatni yangilab turish
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('time').innerText = now.toLocaleTimeString();
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
 
-        init();
+        // Ilovani ishga tushirish
+        initMarkets();
     </script>
 </body>
 </html>
